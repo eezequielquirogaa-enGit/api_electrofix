@@ -1,0 +1,8 @@
+RewriteEngine On
+ 
+# Si la solicitud no corresponde a un archivo físico existente
+RewriteCond %{REQUEST_FILENAME} !-f
+# Y tampoco a un directorio físico existente
+RewriteCond %{REQUEST_FILENAME} !-d
+# Redirige la petición a index.php manteniendo los parámetros query string
+RewriteRule ^ index.php [QSA,L]
