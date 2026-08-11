@@ -1,6 +1,8 @@
 <?php
 
 use App\Controllers\UserController;
+use App\Controllers\ServicioController;
+use App\Controllers\ProductoController;
 use App\Middleware\JwtMiddleware;
 use Psr\Http\Message\RequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -11,15 +13,37 @@ return function (App $app) {
 
     // ── Ruta pública: status de la API ──────────────────────────────
     $app->get('/', function (Request $request, Response $response) {
-        $response->getBody()->write(json_encode(['status' => 'API funcionando']));
+        $response->getBody()->write(json_encode(['status' => 'API ElectroFix funcionando']));
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // ── Ruta pública: login ─────────────────────────────────────────
-    // NO lleva middleware — es el endpoint que devuelve el token
+    // ── Rutas públicas: autenticación ───────────────────────────────
+    // NO llevan middleware — son los endpoints que devuelven/crean credenciales
     $app->post('/login', [UserController::class, 'login']);
+    $app->post('/register', [UserController::class, 'register']);
 
-    // ── Rutas protegidas: requieren token JWT válido ─────────────────
+    // ── Rutas públicas: consulta de servicios y productos ───────────
+    // La página principal de ElectroFix los consume sin autenticación
+    $app->get('/servicios', [ServicioController::class, 'listar']);
+    $app->get('/servicios/{id}', [ServicioController::class, 'obtener']);
+    $app->get('/productos', [ProductoController::class, 'listar']);
+    $app->get('/productos/{id}', [ProductoController::class, 'obtener']);
+
+    // ── Rutas protegidas: gestión de servicios (requieren token JWT) ─
+    $app->group('/servicios', function (RouteCollectorProxy $group) {
+        $group->post('',        [ServicioController::class, 'crear']);
+        $group->put('/{id}',    [ServicioController::class, 'actualizar']);
+        $group->delete('/{id}', [ServicioController::class, 'eliminar']);
+    })->add(new JwtMiddleware());
+
+    // ── Rutas protegidas: gestión de productos (requieren token JWT) ─
+    $app->group('/productos', function (RouteCollectorProxy $group) {
+        $group->post('',        [ProductoController::class, 'crear']);
+        $group->put('/{id}',    [ProductoController::class, 'actualizar']);
+        $group->delete('/{id}', [ProductoController::class, 'eliminar']);
+    })->add(new JwtMiddleware());
+
+    // ── Rutas protegidas: usuarios (requieren token JWT) ─────────────
     // RouteCollectorProxy agrupa rutas y les aplica el mismo middleware
     $app->group('/usuarios', function (RouteCollectorProxy $group) {
         $group->get('',        [UserController::class, 'listar']);

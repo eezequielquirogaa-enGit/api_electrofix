@@ -414,6 +414,72 @@ class UserController extends BaseController
         )
     )]
 
+    // ═════════════════════════════════════════════════════
+    // ENDPOINT PÚBLICO: POST /register
+    // ═════════════════════════════════════════════════════
+    #[OA\Post(
+        path: "/register",
+        summary: "Registrar un nuevo usuario",
+        description: "Endpoint público que crea un nuevo usuario administrador. La contraseña se almacena hasheada con bcrypt.",
+        tags: ["Autenticación"]
+    )]
+    #[OA\RequestBody(
+        required: true,
+        description: "Datos del nuevo usuario",
+        content: new OA\JsonContent(
+            required: ["nombre", "email", "password"],
+            properties: [
+                new OA\Property(property: "nombre", type: "string", example: "Nuevo Admin", maxLength: 100),
+                new OA\Property(property: "email", type: "string", format: "email", example: "nuevo@example.com", maxLength: 100),
+                new OA\Property(property: "password", type: "string", format: "password", example: "mipass123", maxLength: 255)
+            ],
+            type: "object"
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: "Usuario registrado exitosamente",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "success"),
+                new OA\Property(
+                    property: "data",
+                    properties: [
+                        new OA\Property(property: "id", type: "integer", example: 3),
+                        new OA\Property(property: "message", type: "string", example: "Usuario registrado")
+                    ],
+                    type: "object"
+                )
+            ],
+            type: "object"
+        )
+    )]
+    #[OA\Response(
+        response: 400,
+        description: "Datos incompletos o email ya registrado",
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "error"),
+                new OA\Property(property: "message", type: "string", example: "El email ya está registrado")
+            ],
+            type: "object"
+        )
+    )]
+
+    /** POST /register */
+    protected function register()
+    {
+        $data = $this->args;
+        if (empty($data['nombre']) || empty($data['email']) || empty($data['password'])) {
+            return $this->jsonErrorResponse('Datos incompletos', 400);
+        }
+        if ($this->userModel->findByEmail($data['email'])) {
+            return $this->jsonErrorResponse('El email ya está registrado', 400);
+        }
+        $id = $this->userModel->create($data);
+        return ['id' => $id, 'message' => 'Usuario registrado'];
+    }
+
     /** POST /login */
     protected function login()
     {
