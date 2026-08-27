@@ -3,6 +3,7 @@
 use App\Controllers\UserController;
 use App\Controllers\ServicioController;
 use App\Controllers\ProductoController;
+use App\Controllers\ImageController;
 use App\Middleware\JwtMiddleware;
 use Psr\Http\Message\RequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -42,6 +43,10 @@ return function (App $app) {
         $group->put('/{id}',    [ProductoController::class, 'actualizar']);
         $group->delete('/{id}', [ProductoController::class, 'eliminar']);
     })->add(new JwtMiddleware());
+
+    // ── Ruta protegida: subida de imágenes de producto (token JWT) ───
+    $app->post('/subir-imagen', [ImageController::class, 'subir'])
+        ->add(new JwtMiddleware());
 
     // ── Rutas protegidas: usuarios (requieren token JWT) ─────────────
     // RouteCollectorProxy agrupa rutas y les aplica el mismo middleware

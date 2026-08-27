@@ -414,6 +414,53 @@ class UserController extends BaseController
         )
     )]
 
+    /** POST /login */
+    protected function login()
+    {
+        $email    = $this->args['email']    ?? '';
+        $password = $this->args['password'] ?? '';
+
+        if (empty($email) || empty($password)) {
+            return $this->jsonErrorResponse('Email y contraseña son requeridos', 422);
+        }
+
+        $user = $this->userModel->findByEmail($email);
+
+        if (!$user || !password_verify($password, $user['password'])) {
+            return $this->jsonErrorResponse('Credenciales inválidas', 401);
+        }
+
+        // Leer la clave secreta del entorno
+        $secret = $_ENV['JWT_SECRET'] ?? '';
+        if (empty($secret)) {
+            // Error de configuración del servidor — no expongas detalles al cliente
+            return $this->jsonErrorResponse('Error de configuración del servidor', 500);
+        }
+
+        // Construir el payload del token
+        $now     = time();
+        $payload = [
+            'sub'   => $user['id'],
+            'email' => $user['email'],
+            'iat'   => $now,
+            'exp'   => $now + (60 * 60),   // expira en 1 hora
+        ];
+
+        // Generar el token firmado con HS256
+        $token = JWT::encode($payload, $secret, 'HS256');
+
+        // Devolver el token con el formato que espera el frontend
+        return [
+            'status' => 'success',
+            'token'  => $token,
+            'user'   => [
+                'id'     => $user['id'],
+                'nombre' => $user['nombre'],
+                'email'  => $user['email'],
+            ],
+        ];
+    }
+
     // ═════════════════════════════════════════════════════
     // ENDPOINT PÚBLICO: POST /register
     // ═════════════════════════════════════════════════════
@@ -478,52 +525,5 @@ class UserController extends BaseController
         }
         $id = $this->userModel->create($data);
         return ['id' => $id, 'message' => 'Usuario registrado'];
-    }
-
-    /** POST /login */
-    protected function login()
-    {
-        $email    = $this->args['email']    ?? '';
-        $password = $this->args['password'] ?? '';
-
-        if (empty($email) || empty($password)) {
-            return $this->jsonErrorResponse('Email y contraseña son requeridos', 422);
-        }
-
-        $user = $this->userModel->findByEmail($email);
-
-        if (!$user || !password_verify($password, $user['password'])) {
-            return $this->jsonErrorResponse('Credenciales inválidas', 401);
-        }
-
-        // Leer la clave secreta del entorno
-        $secret = $_ENV['JWT_SECRET'] ?? '';
-        if (empty($secret)) {
-            // Error de configuración del servidor — no expongas detalles al cliente
-            return $this->jsonErrorResponse('Error de configuración del servidor', 500);
-        }
-
-        // Construir el payload del token
-        $now     = time();
-        $payload = [
-            'sub'   => $user['id'],
-            'email' => $user['email'],
-            'iat'   => $now,
-            'exp'   => $now + (60 * 60),   // expira en 1 hora
-        ];
-
-        // Generar el token firmado con HS256
-        $token = JWT::encode($payload, $secret, 'HS256');
-
-        // Devolver el token con el formato que espera el frontend
-        return [
-            'status' => 'success',
-            'token'  => $token,
-            'user'   => [
-                'id'     => $user['id'],
-                'nombre' => $user['nombre'],
-                'email'  => $user['email'],
-            ],
-        ];
     }
 }
